@@ -5,6 +5,10 @@ class ResponseError(Exception):
     pass
 
 
+class ParamError(Exception):
+    pass
+
+
 def generate_link(apiserver, params):
     link = apiserver + '?'
     for key, value in params.items():
@@ -111,33 +115,36 @@ class YandexApi:
             params = add_search_area(params, ll=ll, spn=spn, bbox=bbox, format_bbox=format_bbox)
         return make_response(self.search_api, params, return_link, check_success=check_success)
 
-    def static_get(self, l, param, s_type='ll', z=10, size=(600, 450), scale=2.0,
+    def static_get(self, l, param, s_type='ll', spn=(0.005, 0.005), z=10, size=(600, 450), scale=1.0,
                    pt=None, pl=None, lang='ru_RU', format_bbox=False,
                    return_link=False, check_success=False):
+
         if s_type == 'bbox':
             if format_bbox and param is list:
                 param = f'{param[0][0]},{param[0][1]}~{param[1][0]},{param[1][1]}'
             params = {
                 'l': l,
-                'bbox': param,
+                'bbox': param
             }
         elif s_type == 'll':
             params = {
                 'l': l,
-                'll': ','.join(map(str, param)),
+                'll': ','.join(list(map(str, param)))
             }
         else:
-            return
+            raise ParamError(f's_type must be one of (ll, bbox), not {s_type}')
+        if s_type == 'll':
+            params['spn'] = ','.join(map(str, spn))
         if z != 10:
             params['z'] = z
-        if scale != 2.0:
+        if scale != 1.0 and l != 'sat':
             params['scale'] = scale
         if lang != 'ru_RU':
             params['lang'] = lang
         if size != (600, 450):
             params['size'] = ','.join(map(str, size))
         if pt is not None:
-            params['pl'] = '~'.join(pl)
+            params['pt'] = '~'.join(pl)
         if pl is not None:
             params['pl'] = '~'.join(pl)
         return make_response(self.static_api, params, return_link, check_success=check_success)
